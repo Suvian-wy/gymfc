@@ -3,8 +3,10 @@ from pathlib import Path
 import os.path
 import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-import tensorflow as tf
-tf.logging.set_verbosity(tf.logging.ERROR)
+# import tensorflow as tf
+# tf.logging.set_verbosity(tf.logging.ERROR)
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import gym
 from gymfc_nf.envs import *
 from gymfc_nf.utils.monitor import CheckpointMonitor
