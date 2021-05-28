@@ -49,6 +49,7 @@ class BaseEnv(FlightControlEnv, gym.Env):
         # parameter containing the class reference
         self.step_callback = None
 
+
     def set_aircraft_model(self, model):
         """Set the aircraft's model.sdf
         
@@ -81,10 +82,18 @@ class BaseEnv(FlightControlEnv, gym.Env):
         # Interface with gymfc
         self.obs = self.step_sim(self.y)
 
-        self.angular_rate = (self.imu_angular_velocity_rpy.copy() + 
-            self.sample_noise(self))
-        self.true_error = self.angular_rate_sp - self.imu_angular_velocity_rpy
-        self.measured_error = self.angular_rate_sp - self.angular_rate
+        #Suvian:
+        # self.angular_rate = (self.imu_angular_velocity_rpy.copy() + 
+        #     self.sample_noise(self))
+        # self.true_error = self.angular_rate_sp - self.imu_angular_velocity_rpy
+        # self.measured_error = self.angular_rate_sp - self.angular_rate
+
+        self.attitude_rpy = self.quat_to_rpy()
+        self.attitude_measurred = self.attitude_rpy.copy() + self.sample_noise(self)
+        self.angular_rate = self.imu_angular_velocity_rpy.copy()
+        self.true_error = self.attitude_sp - self.attitude_rpy
+        self.measured_error = self.attitude_sp - self.attitude_measurred
+
 
         done = self.sim_time >= self.max_sim_time 
 
@@ -141,6 +150,12 @@ class BaseEnv(FlightControlEnv, gym.Env):
         # occur in an episode.
         self.step_counter = 0
 
+        #Suvian
+        self.attitude_sp = np.zeros(3)
+        self.attitude_rpy = np.zeros(3)
+        self.attitude_measurred = np.zeros(3)
+        self.imu_orientation_quat = np.array([1, 0, 0, 0])
+
     def reset(self):
         self._init()
         self.obs = super().reset()
@@ -157,3 +172,15 @@ class BaseEnv(FlightControlEnv, gym.Env):
     def update_setpoint(self):
         """Update the angular velocity setpoint, angular_rate_sp."""
         raise exception.NotImplementedError
+
+    def quat_to_rpy(self):
+        w=self.imu_orientation_quat[0]
+        x=self.imu_orientation_quat[1]
+        y=self.imu_orientation_quat[2]
+        z=self.imu_orientation_quat[3]
+
+        roll =math.degrees(math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y)))
+        pitch =math.degrees(math.asin(2 * (w * y - z * x)))
+        yaw =math.degrees(math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)))
+
+        return np.array([roll,pitch,yaw])

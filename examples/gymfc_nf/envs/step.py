@@ -8,8 +8,12 @@ import time
 from .rewards import RewardEnv
 
 class StepEnv(RewardEnv): 
-    def __init__(self, pulse_width = 1, max_rate = 100, state_fn = None,
+    # def __init__(self, pulse_width = 1, max_rate = 100, state_fn = None,
+                #  max_sim_time = 1 ):
+    #Suvian 加入 max_angular
+    def __init__(self, pulse_width = 1, max_rate = 100, max_angular=45, state_fn = None,
                  max_sim_time = 1 ):
+
         """Create a reinforcement learning environment that generates step input
         setpoints. Technically this is a multi-axis singlet input, the
         terminology in this package needs to be updated to reflect flight test
@@ -42,16 +46,31 @@ class StepEnv(RewardEnv):
         self.angular_rate_sp = np.zeros(3)
         self.next_pulse_time = 0.512
 
+        #Suvian
+        self.attitude_sp = np.zeros(3)
+        self.max_angular = max_angular
 
     def update_setpoint(self):
+        # if self.sim_time > self.next_pulse_time:
+        #     if (self.angular_rate_sp == np.zeros(3)).all():
+        #         self.angular_rate_sp = self.generated_input
+        #         self.next_pulse_time += self.pulse_width
+        #     else:
+        #         self.angular_rate_sp = np.zeros(3)
+        #         self.next_pulse_time += self.pulse_width
+        #     self.rising = False
+
+        #Suvian
         if self.sim_time > self.next_pulse_time:
-            if (self.angular_rate_sp == np.zeros(3)).all():
-                self.angular_rate_sp = self.generated_input
+            if (self.attitude_sp == np.zeros(3)).all():
+                self.attitude_sp = self.target_attitude
                 self.next_pulse_time += self.pulse_width
             else:
-                self.angular_rate_sp = np.zeros(3)
+                self.attitude_sp = np.zeros(3)
                 self.next_pulse_time += self.pulse_width
             self.rising = False
+
+
 
     def reset(self):
         self.rising = True
@@ -61,10 +80,17 @@ class StepEnv(RewardEnv):
         # Define the singlet input in the beginning so it can be overriden
         # externally if needed for testing.
         self.generated_input = self.sample_target()
+
+        #Suvian
+        self.attitude_sp = np.zeros(3)
+        self.target_attitude=self.sample_target_attitude()
+
         return super().reset()
 
     def sample_target(self):
         """Sample a random angular velocity setpoint """
         return self.np_random.normal(0, self.max_rate, size=3)
 
-
+    #Suvian
+    def sample_target_attitude(self):
+        return self.np_random.normal(0,self.max_angular,size=3)

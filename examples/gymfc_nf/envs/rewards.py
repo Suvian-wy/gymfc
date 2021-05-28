@@ -35,18 +35,24 @@ class RewardEnv(BaseEnv):
         shaping = \
             -np.sum(self.true_error**2)
         
-        e_penalty = 0
-        if self.prev_shaping is not None:
-            e_penalty = shaping - self.prev_shaping
-        self.prev_shaping = shaping
+        # e_penalty = 0
+        # if self.prev_shaping is not None:
+        #     e_penalty = shaping - self.prev_shaping
+        # self.prev_shaping = shaping
+
+        e_penalty = shaping
 
         # Reward the agent for minimizing their control ouputs. 
         # In order to get the reward, the agent must be in the error band, 
         # otherwise the agent will just output zero.
         min_y_reward = 0
         # Error band is minimum 5 deg/s, maximum 10% of angular rate sp
-        threshold = np.maximum(np.abs(self.angular_rate_sp) * 0.1, np.array([5]*3)) 
+        # Suvian:
+        # threshold = np.maximum(np.abs(self.angular_rate_sp) * 0.1, np.array([5]*3)) 
+        # inband = (np.abs(self.true_error) <= threshold).all()
+        threshold = np.maximum(np.abs(self.attitude_sp) * 0.2, np.array([4]*3)) 
         inband = (np.abs(self.true_error) <= threshold).all()
+
         percent_idle = 0.12 #should be about 12%, different for every aircraft
         max_min_y_reward = 1000
         if np.average(self.y) < percent_idle: # You get a max of 900
@@ -80,8 +86,13 @@ class RewardEnv(BaseEnv):
         total_penalty = 0 
 
         # These always apply
-        if np.sum(self.y == 0) > 2 and not (self.angular_rate_sp == np.zeros(3)).all():
+        # if np.sum(self.y == 0) > 2 and not (self.angular_rate_sp == np.zeros(3)).all():
+        #     total_penalty -= penalty 
+
+        #Suvian
+        if np.sum(self.y == 0) > 2 and not (self.attitude_sp == np.zeros(3)).all():
             total_penalty -= penalty 
+
         # All high, should only happen on a punch out, not for attitude control
         if (self.y == 1).all():
             total_penalty -= penalty

@@ -143,4 +143,5 @@ def state_error_quat_motor(local):
     rpm_norm = self.esc_motor_angular_velocity/max_rpm 
     return np.concatenate([err_rad, q, rpm_norm]) 
 
-
+def state_rpy_error_rate(local):
+    return np.concatenate([local.true_error, local.angular_rate])
