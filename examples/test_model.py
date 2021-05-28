@@ -27,7 +27,7 @@ if __name__ == "__main__":
                         help="File path of the aircraft digitial twin/model SDF.")
     parser.add_argument('--eval-dir', 
                         help="Directory where evaluation logs are saved, if different than default.")
-    parser.add_argument('--gym-id', default="gymfc_nf-continuous-v1")
+    parser.add_argument('--gym-id', default="gymfc_nf-step-v1")
     parser.add_argument('--num-trials', type=int, default=1)
     # Provide a seed so the same setpoint will be created. Useful for debugging
     parser.add_argument('--seed', help='RNG seed', type=int, default=-1)
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     env = gym.make(gym_id)
     env.seed(seed)
     env.set_aircraft_model(args.twin)
-
+    # env.render()
     # For evaluation we compute all of the singlet inputs upfront so we get a
     # more accurate comparison.
     # XXX (wfk) This will not work for other environments with mulitple
@@ -90,22 +90,22 @@ if __name__ == "__main__":
 
                 logs = []
                 while True:
-                    ac = pi.action(ob, env.sim_time, env.angular_rate_sp,
-                                   env.imu_angular_velocity_rpy)
+                    ac = pi.action(ob, env.sim_time, env.attitude_sp,
+                                   env.attitude_rpy)
                     ob, reward, done,  _ = env.step(ac)
-
+                    print(env.attitude_rpy)
                     # TODO (wfk) Should we standardize this log format? We could
                     # use NASA's SIDPAC channel format.
                     log = ([env.sim_time] +
                             ob.tolist() + # The observations are the NN input
                             ac.tolist() + # The actions are the NN output
-                            env.imu_angular_velocity_rpy.tolist() + # Angular velocites
-                            env.angular_rate_sp.tolist() + #
+                            env.attitude_rpy.tolist() + # Angular velocites
+                            env.attitude_sp.tolist() + #
                             env.y.tolist() + # Y is the output sent to the ESC
                             env.esc_motor_angular_velocity.tolist() +
                             [reward])# The reward that would have been given for the action, can be helpful for debugging
 
-                    e = env.imu_angular_velocity_rpy - env.angular_rate_sp
+                    e = env.attitude_sp - env.attitude_rpy
                     es.append(e)
                     rs.append(reward)
                     logs.append(log)
@@ -117,4 +117,4 @@ if __name__ == "__main__":
             print("\tMAE={:.4f} Ave. Reward={:.4f}".format(np.mean(np.abs(es)), np.mean(rs)))
 
     env.render()
-    callback("../../models/baselines_5bd6ca4_20210524-213303/checkpoints/ppo1-gymfc_nf-continuous-v1-9902080.ckpt")
+    callback("../../models/baselines_513602f_20210528-094859/checkpoints/ppo1-gymfc_nf-step-v1-7400448.ckpt")
