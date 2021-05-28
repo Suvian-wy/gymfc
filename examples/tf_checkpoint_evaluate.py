@@ -48,6 +48,7 @@ if __name__ == "__main__":
     env = gym.make(gym_id)
     env.seed(seed)
     env.set_aircraft_model(args.twin)
+    env.render()
 
     # For evaluation we compute all of the singlet inputs upfront so we get a
     # more accurate comparison.
@@ -90,8 +91,8 @@ if __name__ == "__main__":
 
                 logs = []
                 while True:
-                    ac = pi.action(ob, env.sim_time, env.angular_rate_sp,
-                                   env.imu_angular_velocity_rpy)
+                    ac = pi.action(ob, env.sim_time, env.attitude_sp,
+                                   env.attitude_rpy)
                     ob, reward, done,  _ = env.step(ac)
 
                     # TODO (wfk) Should we standardize this log format? We could
@@ -99,13 +100,13 @@ if __name__ == "__main__":
                     log = ([env.sim_time] +
                             ob.tolist() + # The observations are the NN input
                             ac.tolist() + # The actions are the NN output
-                            env.imu_angular_velocity_rpy.tolist() + # Angular velocites
-                            env.angular_rate_sp.tolist() + #
+                            env.attitude_rpy.tolist() + # Angular velocites
+                            env.attitude_sp.tolist() + #
                             env.y.tolist() + # Y is the output sent to the ESC
                             env.esc_motor_angular_velocity.tolist() +
                             [reward])# The reward that would have been given for the action, can be helpful for debugging
 
-                    e = env.imu_angular_velocity_rpy - env.angular_rate_sp
+                    e = env.attitude_sp - env.attitude_rpy
                     es.append(e)
                     rs.append(reward)
                     logs.append(log)
