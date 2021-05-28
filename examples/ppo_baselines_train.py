@@ -23,7 +23,7 @@ import argparse
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 
-tf.logging.set_verbosity(tf.logging.ERROR)
+# tf.logging.set_verbosity(tf.logging.ERROR)
 def get_commit_hash():
     out = subprocess.run(["git", "describe", "--always"], stdout=subprocess.PIPE, encoding="utf-8")
     commit = out.stdout.strip()
@@ -56,10 +56,10 @@ def train(env, num_timesteps, seed, ckpt_dir=None,
     else:
         logger.configure(format_strs=[])
     logger.set_level(logger.DISABLED)
-    workerseed = seed + 1000000 * rank
+    workerseed = seed + 1000000 * rank + 1
     def policy_fn(name, ob_space, ac_space):
         return MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
-                         hid_size=32, num_hid_layers=2)
+                         hid_size=64, num_hid_layers=2)
     if render:
         env.render()
     env.seed(workerseed)
@@ -206,6 +206,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser("Synthesize a neuro-flight controller.")
     parser.add_argument('--model_dir', default="../../models",
                         help="Directory where models are saved to.")
+    parser.add_argument('--restore_dir', default=None,
+                        help="Directory where models are saved to.")
     parser.add_argument('--twin', default="./gymfc_nf/twins/nf1/model.sdf",
                         help="File path of the aircraft digitial twin/model SDF.")
     parser.add_argument('--seed', type=int, default=np.random.randint(0, 1e6),
@@ -223,6 +225,7 @@ if __name__ == '__main__':
     render = False
     # How many timesteps until a checkpoint is saved
     ckpt_freq = args.ckpt_freq
+    rs_dir=args.restore_dir
 
     # RL hyperparameters
     timesteps = args.timesteps
@@ -252,5 +255,5 @@ if __name__ == '__main__':
     train(env, timesteps, seed, ckpt_dir = ckpt_dir, render = render,
           ckpt_freq = ckpt_freq, schedule = schedule, optim_stepsize = step_size,
           horizon = horizon, optim_batchsize = batchsize, optim_epochs = epochs,
-          gamma = gamma)
+          gamma = gamma,restore_dir=rs_dir)
 
