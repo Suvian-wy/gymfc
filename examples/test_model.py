@@ -1,4 +1,5 @@
 import argparse
+from gymfc.msgs.Action_pb2 import Action
 from pathlib import Path
 import os.path
 import numpy as np
@@ -48,6 +49,8 @@ if __name__ == "__main__":
     env = gym.make(gym_id)
     env.seed(seed)
     env.set_aircraft_model(args.twin)
+    # rate_controller_path="/home/suvian/softWare/models/baselines_7ddef63_20210523-153627/checkpoints/ppo1-gymfc_nf-step-v1-7400448.ckpt"
+    # env.set_rate_controller(rate_controller_path)
     # env.render()
     # For evaluation we compute all of the singlet inputs upfront so we get a
     # more accurate comparison.
@@ -61,60 +64,59 @@ if __name__ == "__main__":
         Path(ckpt_eval_dir).mkdir(parents=True, exist_ok=True)
 
         print ("Evaluating checkpoint {}".format(checkpoint_path))
-        with tf.Session() as sess:
+        
+        sess1=tf.Session()
+        # with tf.Session() as sess:
+        with sess1.as_default():
+            sess1.run(tf.global_variables_initializer())
             saver = tf.train.import_meta_graph(checkpoint_path + '.meta',
                                                clear_devices=True)
-            saver.restore(sess, checkpoint_path)
-            pi = PpoBaselinesPolicy(sess)
+            saver.restore(sess1, checkpoint_path)
+            pi = PpoBaselinesPolicy(sess1)
 
             es = []
             rs = []
             log_header = ""
-            for i in range(num_trials):
 
-                pi.reset()
-                ob = env.reset()
-                # Override the random generatd input in the environment
-                # must do this after the reset becuase this is normally where
-                # this gets computed.
-                env.generated_input = inputs[i]
-
-                if len(log_header) == 0:
-                    log_header = make_header(len(ob))
-
-                log_file = os.path.join(ckpt_eval_dir, "trial-{}.csv".format(i))
-                print("\t", log_file)
-
-                sim_time = 0
-                actual = np.zeros(3)
-
-                logs = []
-                while True:
+        for i in range(num_trials):
+            pi.reset()
+            ob = env.reset()
+            # Override the random generatd input in the environment
+            # must do this after the reset becuase this is normally where
+            # this gets computed.
+            env.generated_input = inputs[i]
+            if len(log_header) == 0:
+                log_header = make_header(len(ob))
+            log_file = os.path.join(ckpt_eval_dir, "trial-{}.csv".format(i))
+            print("\t", log_file)
+            sim_time = 0
+            actual = np.zeros(3)
+            logs = []
+            while True:
+                with sess1.as_default():
                     ac = pi.action(ob, env.sim_time, env.attitude_sp,
                                    env.attitude_rpy)
-                    ob, reward, done,  _ = env.step(ac)
-                    print(env.attitude_rpy)
-                    # TODO (wfk) Should we standardize this log format? We could
-                    # use NASA's SIDPAC channel format.
-                    log = ([env.sim_time] +
-                            ob.tolist() + # The observations are the NN input
-                            ac.tolist() + # The actions are the NN output
-                            env.attitude_rpy.tolist() + # Angular velocites
-                            env.attitude_sp.tolist() + #
-                            env.y.tolist() + # Y is the output sent to the ESC
-                            env.esc_motor_angular_velocity.tolist() +
-                            [reward])# The reward that would have been given for the action, can be helpful for debugging
-
-                    e = env.attitude_sp - env.attitude_rpy
-                    es.append(e)
-                    rs.append(reward)
-                    logs.append(log)
-
-                    if done:
-                        break
-                np.savetxt(log_file, logs, delimiter=",", header=log_header)
-
-            print("\tMAE={:.4f} Ave. Reward={:.4f}".format(np.mean(np.abs(es)), np.mean(rs)))
-
+                print(ac)
+                input()
+                ob, reward, done,  _ = env.step(ac)
+                print(env.attitude_sp-env.attitude_rpy)
+                # TODO (wfk) Should we standardize this log format? We could
+                # use NASA's SIDPAC channel format.
+                log = ([env.sim_time] +
+                        ob.tolist() + # The observations are the NN input
+                        ac.tolist() + # The actions are the NN output
+                        env.imu_angular_velocity_rpy.tolist() + # Angular velocites
+                        env.angular_rate_sp.tolist() + #
+                        env.y.tolist() + # Y is the output sent to the ESC
+                        env.esc_motor_angular_velocity.tolist() +
+                        [reward])# The reward that would have been given for the action, can be helpful for debugging
+                e = env.attitude_sp - env.attitude_rpy
+                es.append(e)
+                rs.append(reward)
+                logs.append(log)
+                if done:
+                    break
+            np.savetxt(log_file, logs, delimiter=",", header=log_header)
+        print("\tMAE={:.4f} Ave. Reward={:.4f}".format(np.mean(np.abs(es)), np.mean(rs)))
     env.render()
-    callback("../../models/baselines_513602f_20210528-094859/checkpoints/ppo1-gymfc_nf-step-v1-7400448.ckpt")
+    callback("../../models/baselines_8e8f76b_20210528-224619/checkpoints/ppo1-gymfc_nf-step-v1-8603136.ckpt")
