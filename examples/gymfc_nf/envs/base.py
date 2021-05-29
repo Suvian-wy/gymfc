@@ -34,8 +34,9 @@ class BaseEnv(FlightControlEnv, gym.Env):
         self._init()
 
         # Define the Gym action and observation spaces
-        self.action_space = spaces.Box(-np.ones(4), np.ones(4), dtype=np.float32)
-        self.action = self.action_space.low 
+        #DONE:changed inner_action_sapce
+        self.inner_action_space = spaces.Box(-np.ones(4), np.ones(4), dtype=np.float32)
+        self.action = self.inner_action_space.low 
         num_inputs = len(self.state_fn(self))
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(num_inputs,), 
                                             dtype=np.float32)
@@ -106,6 +107,9 @@ class BaseEnv(FlightControlEnv, gym.Env):
         # neural network.
         state = self.state_fn(self)
 
+        # Suvian
+        self.last_true_error = self.true_error.copy() 
+
         self.last_measured_error = self.measured_error.copy() 
         self.last_y = self.y.copy()
         self.step_counter += 1
@@ -155,6 +159,7 @@ class BaseEnv(FlightControlEnv, gym.Env):
         self.attitude_rpy = np.zeros(3)
         self.attitude_measurred = np.zeros(3)
         self.imu_orientation_quat = np.array([1, 0, 0, 0])
+        self.last_true_error = np.zeros(3)
 
     def reset(self):
         self._init()

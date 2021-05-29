@@ -50,7 +50,7 @@ class RewardEnv(BaseEnv):
         # Suvian:
         # threshold = np.maximum(np.abs(self.angular_rate_sp) * 0.1, np.array([5]*3)) 
         # inband = (np.abs(self.true_error) <= threshold).all()
-        threshold = np.maximum(np.abs(self.attitude_sp) * 0.2, np.array([4]*3)) 
+        threshold = np.maximum(np.abs(self.attitude_sp) * 0.2, np.array([5]*3)) 
         inband = (np.abs(self.true_error) <= threshold).all()
 
         percent_idle = 0.12 #should be about 12%, different for every aircraft
@@ -59,24 +59,25 @@ class RewardEnv(BaseEnv):
             min_y_reward = max_min_y_reward * (1 - percent_idle) * inband
         else:
             min_y_reward = max_min_y_reward * (1 - np.average(self.y)) * inband 
-
         rewards = [
-            # penalty for oscillations
-            -1000 * np.max(np.abs(self.y - self.last_y)),
-            # Reward for minimizing control output. This is needed  because the
-            # training environment fixes the aircraft about its center of thrust
-            # thus we need to teach the agent to use as low control output values
-            # as possible. 
-            #
-            # A balance needs to be 
-            min_y_reward,
-            # penalty for angular velocity tracking
-            e_penalty,
-            # penalty for oversaturating the control output, without this 
-            # the agent tends to generate binary outputs, i.e., [-1, 1].
-            -1e9 * np.sum(self.oversaturation_high()),
-            # penalty if the agent does nothing, i.e., refusing to 'play'
-            self.doing_nothing_penalty(),
+            # # penalty for oscillations
+            # -1000 * np.max(np.abs(self.y - self.last_y)),
+            # # Reward for minimizing control output. This is needed  because the
+            # # training environment fixes the aircraft about its center of thrust
+            # # thus we need to teach the agent to use as low control output values
+            # # as possible. 
+            # #
+            # # A balance needs to be 
+            # min_y_reward,
+            # # penalty for angular velocity tracking
+            # e_penalty,
+            # # penalty for oversaturating the control output, without this 
+            # # the agent tends to generate binary outputs, i.e., [-1, 1].
+            # -1e9 * np.sum(self.oversaturation_high()),
+            # # penalty if the agent does nothing, i.e., refusing to 'play'
+            # self.doing_nothing_penalty(),
+            # self.angular_rate_penalty(),
+            e_penalty
         ]
         self.ind_rewards = rewards
 

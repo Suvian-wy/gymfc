@@ -7,6 +7,11 @@ from gymfc.envs.fc_env import FlightControlEnv
 import time
 from .rewards import RewardEnv
 
+
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+from gymfc_nf.policies import PpoBaselinesPolicy
+
 class StepEnv(RewardEnv): 
     # def __init__(self, pulse_width = 1, max_rate = 100, state_fn = None,
                 #  max_sim_time = 1 ):
@@ -49,6 +54,11 @@ class StepEnv(RewardEnv):
         #Suvian
         self.attitude_sp = np.zeros(3)
         self.max_angular = max_angular
+        self.rate_controller = None
+        self.rate_error=np.zeros(3)
+        self.last_rate_error=np.zeros(3)
+        self.action_space = spaces.Box(-np.ones(3), np.ones(3), dtype=np.float32)
+        self.sess=None
 
     def update_setpoint(self):
         # if self.sim_time > self.next_pulse_time:
@@ -94,3 +104,31 @@ class StepEnv(RewardEnv):
     #Suvian
     def sample_target_attitude(self):
         return self.np_random.normal(0,self.max_angular,size=3)
+
+    def state_rate_error_deltaerr(self):
+        self.rate_error=self.angular_rate_sp - self.imu_angular_velocity_rpy
+        error_delta = self.rate_error - self.last_rate_error 
+        self.last_rate_error=self.rate_error
+        return np.concatenate([self.rate_error, error_delta]) 
+
+    def step(self,action):
+        if(self.rate_controller==None):
+            return
+        self.angular_rate_sp = (action*500)
+        print(action)
+        ob = self.state_rate_error_deltaerr()
+        with self.sess.as_default():
+            ac = self.rate_controller.action(ob, self.sim_time, self.attitude_sp, self.attitude_rpy)
+        # print(ac)
+        return super().step(ac)
+    
+    def set_rate_controller(self,checkpoint_path):
+
+        self.sess=tf.Session()
+        with self.sess.as_default():
+            saver = tf.train.import_meta_graph(checkpoint_path + '.meta',
+                                               clear_devices=True)
+            saver.restore(self.sess, checkpoint_path)
+            self.rate_controller = PpoBaselinesPolicy(self.sess)
+        
+        print("----set_rate_controller successs")

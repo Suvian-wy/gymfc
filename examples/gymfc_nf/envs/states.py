@@ -144,4 +144,5 @@ def state_error_quat_motor(local):
     return np.concatenate([err_rad, q, rpm_norm]) 
 
 def state_rpy_error_rate(local):
+    error_delta = local.true_error - local.last_true_error
     return np.concatenate([local.true_error, local.angular_rate])
