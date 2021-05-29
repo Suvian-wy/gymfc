@@ -56,10 +56,10 @@ def train(env, num_timesteps, seed, ckpt_dir=None,
     else:
         logger.configure(format_strs=[])
     logger.set_level(logger.DISABLED)
-    workerseed = seed + 1000000 * rank + 1
+    workerseed = seed + 1000000 * rank
     def policy_fn(name, ob_space, ac_space):
         return MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
-                         hid_size=64, num_hid_layers=2)
+                         hid_size=32, num_hid_layers=2)
     if render:
         env.render()
     env.seed(workerseed)
@@ -100,11 +100,8 @@ class StepCallback:
                            "Steps",
 
                            "r",
-                           "-ydelta",
-                           "+ymin",
                            "+/-e",
-                           "-ahigh",
-                           "-nothing",
+
 
                            "score",
 
@@ -116,12 +113,10 @@ class StepCallback:
                          "{:<7}",
                          "{:<15}",
 
+
                          "{:<15}",
                          "{:<15}",
-                         "{:<15}",
-                         "{:<15}",
-                         "{:<15}",
-                         "{:<15}",
+
 
                          "{:<10}",
 
@@ -134,10 +129,6 @@ class StepCallback:
                               "{:<7.0%}",
                               "{:<15}",
 
-                              "{:<15.0f}",
-                              "{:<15.0f}",
-                              "{:<15.0f}",
-                              "{:<15.0f}",
                               "{:<15.0f}",
                               "{:<15.0f}",
 
@@ -154,10 +145,10 @@ class StepCallback:
         self.es.append(local.true_error)
         self.sps.append(local.angular_rate_sp)
 
-        assert local.ind_rewards[0] <= 0 # oscillation penalty
-        assert local.ind_rewards[1] >= 0 # min output reward
-        assert local.ind_rewards[3] <= 0 # over saturation penalty
-        assert local.ind_rewards[4] <= 0 # do nothing penalty
+        # assert local.ind_rewards[0] <= 0 # oscillation penalty
+        # assert local.ind_rewards[1] >= 0 # min output reward
+        # assert local.ind_rewards[3] <= 0 # over saturation penalty
+        # assert local.ind_rewards[4] <= 0 # do nothing penalty
 
         self.rewards.append(local.ind_rewards)
 
@@ -185,10 +176,6 @@ class StepCallback:
 
                     np.mean(self.rewards),
                     ave_ind_rewards[0],
-                    ave_ind_rewards[1],
-                    ave_ind_rewards[2],
-                    ave_ind_rewards[3],
-                    ave_ind_rewards[4],
 
                     e_score,
                     mae_pqr[0],
@@ -251,7 +238,8 @@ if __name__ == '__main__':
 
     cb = StepCallback(timesteps)
     env.step_callback = cb.callback
-
+    rate_controller_path="/home/suvian/softWare/models/baselines_7ddef63_20210523-153627/checkpoints/ppo1-gymfc_nf-step-v1-7400448.ckpt"
+    env.set_rate_controller(rate_controller_path)
     train(env, timesteps, seed, ckpt_dir = ckpt_dir, render = render,
           ckpt_freq = ckpt_freq, schedule = schedule, optim_stepsize = step_size,
           horizon = horizon, optim_batchsize = batchsize, optim_epochs = epochs,
